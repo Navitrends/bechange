@@ -1,149 +1,184 @@
-# Bechange — Bricodari
+# Bricodari — Guide d’utilisation
 
-Documentation du dépôt **Navitrends/bechange**.
+**Comparateur de prix & veille concurrentielle**
 
-Ce projet automatise et modernise plusieurs activités Bricodari. La partie livrée dans ce code est la **veille concurrentielle & prix** (plateforme *Bricodari Price Intelligence*).
+Ce guide s’adresse aux équipes Bricodari (achats, pricing, direction).  
+Il explique **comment utiliser la plateforme au quotidien**, pas comment elle est construite.
 
 Site concerné : [bricodari.tn](https://bricodari.tn)
 
 ---
 
-## Contenu du dépôt
+## À quoi sert l’outil ?
 
-| Élément | Rôle |
-|---------|------|
-| [`bricodari-price-intelligence/`](bricodari-price-intelligence/) | Plateforme comparateur de prix (backend + frontend) |
-| [`Cahier_des_charges.md`](Cahier_des_charges.md) | Cahier des charges global (version simplifiée) |
-| [`Cahier_des_charges_Bricodari_Comparateur_Prix.md`](Cahier_des_charges_Bricodari_Comparateur_Prix.md) | CDC détaillé du comparateur |
-| `generate_docx.py` | Génération des versions Word du CDC |
+En quelques minutes, vous voyez pour chaque produit :
 
-Documentation technique détaillée de la plateforme :  
-→ [`bricodari-price-intelligence/README.md`](bricodari-price-intelligence/README.md)
+- le **prix affiché sur votre site**
+- votre **dernier prix d’achat**
+- les **prix des concurrents**
+- si vous êtes **trop cher**, **moins cher** ou **aligné**
 
----
-
-## Plateforme Price Intelligence — en bref
-
-Elle centralise **3 sources** et produit un **tableau de décision** :
-
-1. **Catalogue site** — sync WooCommerce (bricodari.tn)
-2. **Prix d’achat** — import Excel/CSV (ERP)
-3. **Prix concurrents** — import Excel/CSV
-4. **Comparateur** — écarts, marges, alertes, export CSV
-
-**Règle métier :** la plateforme **n’écrit jamais** automatiquement les prix sur le site. Elle aide à décider.
-
-```
-WooCommerce (catalogue)
-        │
-        ▼
-Prix d'achat (Excel) ──► Base ──► Comparateur ──► Alertes + export
-        ▲
-Prix concurrents (Excel)
-```
-
-### Workflow opérationnel
-
-| Étape | Écran | Action |
-|-------|--------|--------|
-| 1 | Catalogue site | Sync manuelle ou auto (toutes les 6 h) |
-| 2 | Prix d’achat | Upload fichier ERP (SKU, prix, fournisseur) |
-| 3 | Concurrents | Gérer les sites + upload des prix marché |
-| 4 | Comparateur | Recalculer, filtrer, exporter |
-
-Alertes typiques :
-
-- **Trop cher** — vente > concurrent min de plus de ~10 %
-- **Moins cher** — vente < concurrent min de plus de ~5 %
-- **Aligné** — dans la bande
+La plateforme **aide à décider**.  
+Elle **ne change jamais automatiquement** les prix sur le site.
 
 ---
 
-## Architecture technique
+## Parcours en 4 étapes
+
+Suivez toujours cet ordre :
 
 ```
-bricodari-price-intelligence/
-├── backend/          FastAPI + SQLAlchemy + sync WooCommerce
-├── frontend/         React + Vite (interface métier)
-├── docs/             Workflow, checklist, exemples CSV
-├── scripts/          Outils de contrôle / démo
-├── docker-compose.yml
-└── .env.example
+1. Catalogue site  →  2. Prix d’achat  →  3. Concurrents  →  4. Comparateur
 ```
 
-| Couche | Techno |
-|--------|--------|
-| API | FastAPI (port 8000) |
-| UI | React 19 + Vite (port 5173) |
-| Base locale | SQLite |
-| Prod / Docker | PostgreSQL + Redis |
-| Catalogue | WooCommerce REST API |
+| Étape | Menu | Ce que vous faites |
+|-------|------|--------------------|
+| 1 | **Catalogue site** | Récupérer les produits et prix de vente du site |
+| 2 | **Prix d’achat** | Déposer le fichier Excel des prix d’achat |
+| 3 | **Concurrents** | Ajouter les sites concurrents + déposer leurs prix |
+| 4 | **Comparateur** | Lire les écarts, alertes, et exporter pour la direction |
 
 ---
 
-## Démarrage rapide
+## Étape 1 — Catalogue site
 
-```powershell
-cd bricodari-price-intelligence
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-pip install -r backend\requirements.txt
-copy .env.example .env
-# Renseigner WOOCOMMERCE_CONSUMER_KEY / SECRET dans .env
-```
+**But :** avoir la liste à jour des produits vendus sur bricodari.tn.
 
-**Terminal 1 — API**
+1. Ouvrez le menu **1. Catalogue site**
+2. Cliquez sur **Synchroniser maintenant**
+3. Attendez la fin de la synchronisation (elle tourne en arrière-plan)
+4. Vérifiez que le nombre de produits augmente
 
-```powershell
-cd backend
-uvicorn app.main:app --reload --port 8000
-```
-
-**Terminal 2 — Interface**
-
-```powershell
-cd frontend
-npm install
-npm run dev
-```
-
-| URL | Usage |
-|-----|--------|
-| http://127.0.0.1:5173 | Interface métier |
-| http://127.0.0.1:8000/docs | Documentation API (Swagger) |
-
-Clés WooCommerce : WordPress → WooCommerce → Réglages → Avancé → API REST → clé **lecture**.
+**Astuce :** une synchronisation automatique peut tourner régulièrement (par défaut toutes les 6 heures). Vous pouvez l’activer, la désactiver ou changer la fréquence dans le même écran.
 
 ---
 
-## Documentation liée
+## Étape 2 — Prix d’achat
 
-| Document | Contenu |
-|----------|---------|
-| [bricodari-price-intelligence/README.md](bricodari-price-intelligence/README.md) | Doc complète plateforme (écrans, API, Git) |
-| [bricodari-price-intelligence/docs/WORKFLOW.md](bricodari-price-intelligence/docs/WORKFLOW.md) | Workflow métier court |
-| [bricodari-price-intelligence/docs/CHECKLIST_DEMARRAGE.md](bricodari-price-intelligence/docs/CHECKLIST_DEMARRAGE.md) | Prérequis Phase 1–2 |
-| [Cahier_des_charges.md](Cahier_des_charges.md) | Vue d’ensemble des 5 parties du projet Bechange |
+**But :** indiquer à la plateforme votre dernier coût d’achat.
+
+1. Ouvrez **2. Prix d’achat**
+2. Préparez un fichier Excel (ou CSV) avec au minimum :
+
+| Colonne | Exemple |
+|---------|---------|
+| SKU (code article) | `AB-12345` |
+| Désignation | Perceuse 18V |
+| Prix achat | `45.500` |
+| Fournisseur | Nom du fournisseur |
+
+3. Déposez / importez le fichier dans l’écran
+4. Vérifiez le message de confirmation (lignes importées)
+
+**Important :** le code article (**SKU**) doit être le **même** que sur le site. Sinon le produit ne sera pas rapproché.
+
+Chaque import est conservé. Le comparateur utilise toujours le **dernier** prix d’achat connu pour un SKU.
 
 ---
 
-## Périmètre Bechange (hors code actuel)
+## Étape 3 — Concurrents
 
-Le cahier des charges global prévoit aussi :
+**But :** renseigner les prix observés chez les concurrents.
 
-1. Affiches réseaux sociaux  
-2. Blog intelligent SEO & GEO  
-3. **Veille prix** ← ce dépôt  
-4. Devis automatiques via WhatsApp  
-5. Remplacement Mautic / CRM emails  
+### A. Enregistrer un concurrent
+
+1. Ouvrez **3. Concurrents**
+2. Saisissez le **nom** du concurrent et l’**adresse du site**
+3. Validez l’ajout
+
+### B. Importer les prix
+
+Préparez un fichier Excel (ou CSV) avec au minimum :
+
+| Colonne | Exemple |
+|---------|---------|
+| SKU | `AB-12345` |
+| Concurrent | Nom du site |
+| Prix | `59.900` |
+| URL (optionnel) | Lien vers la fiche produit |
+
+Puis importez le fichier dans le même écran.
 
 ---
 
-## Ce qui ne doit pas être committé
+## Étape 4 — Comparateur
 
-- `.env` (secrets WooCommerce)
-- `.venv/`, `node_modules/`
-- bases SQLite (`*.db`)
-- fichiers uploadés / exports métier sensibles
+**But :** voir qui est plus cher / moins cher, et décider.
 
-Voir `.gitignore` dans `bricodari-price-intelligence/`.
+1. Ouvrez **4. Comparateur**
+2. Cliquez sur **Lancer comparaison** (ou le bouton équivalent dans la barre latérale)
+3. Parcourez le tableau :
+
+| Colonne | Signification |
+|---------|----------------|
+| Prix site | Votre prix de vente |
+| Prix d’achat | Votre dernier coût |
+| Concurrent min | Prix le plus bas observé |
+| Écart | Différence vs le concurrent le moins cher |
+| Marge | Estimation de marge |
+| Alerte | Statut prix |
+
+### Comprendre les alertes
+
+| Alerte | Signification | Action typique |
+|--------|---------------|----------------|
+| **Trop cher** | Vous êtes nettement au-dessus du marché | Revoir le prix de vente |
+| **Moins cher** | Vous êtes nettement en dessous | Vérifier la marge / opportunité |
+| **Aligné** | Vous êtes dans une zone correcte | Pas d’action urgente |
+
+### Filtrer et exporter
+
+- Filtrez par texte (nom, SKU, catégorie) ou par type d’alerte
+- Menu **Alertes** : vue concentrée sur les écarts importants
+- Bouton **Export CSV** : fichier pour la direction / Excel
+
+---
+
+## Routine recommandée (chaque semaine)
+
+1. Vérifier que le **catalogue** est à jour (sync si besoin)
+2. Importer le **dernier fichier de prix d’achat**
+3. Importer / mettre à jour les **prix concurrents**
+4. Lancer la **comparaison**
+5. Traiter d’abord les alertes **Trop cher**
+6. Exporter le CSV pour la réunion pricing / direction
+
+---
+
+## Les autres écrans
+
+| Écran | Utilité |
+|-------|---------|
+| **Tableau de bord** | Vue d’ensemble : combien de produits, imports, alertes |
+| **Alertes** | Uniquement les produits hors zone |
+| **Historique** | Suivi des imports et synchronisations déjà faits |
+
+---
+
+## Points d’attention
+
+- Le **SKU** est la clé de tout. Sans SKU commun entre site, achat et concurrent, pas de comparaison fiable.
+- Un fichier mal formaté (colonnes manquantes, mauvais séparateur) peut importer 0 ligne : vérifiez le message après upload.
+- La plateforme **ne publie pas** les nouveaux prix sur le site : la décision et la mise à jour restent humaines.
+- Plus besoin de déposer les fichiers “quelque part sur OneDrive” : **tout se dépose dans la plateforme**.
+
+---
+
+## En cas de problème
+
+| Situation | Que faire |
+|-----------|-----------|
+| “Site non configuré” | Demander à l’équipe technique de brancher l’accès au site |
+| Aucun produit après sync | Relancer la sync ; sinon contacter le support |
+| Import à 0 ligne | Vérifier les noms de colonnes (SKU, prix…) |
+| Produit absent du comparateur | Vérifier que le SKU existe côté site **et** dans vos fichiers |
+| Écarts bizarres | Vérifier que le fichier concurrents utilise le bon SKU |
+
+---
+
+## Pour aller plus loin (équipe technique)
+
+La documentation technique (installation, API, architecture) est dans :
+
+- [`bricodari-price-intelligence/README.md`](bricodari-price-intelligence/README.md)
+- [`bricodari-price-intelligence/docs/`](bricodari-price-intelligence/docs/)

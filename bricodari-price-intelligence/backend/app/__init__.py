@@ -1,0 +1,1 @@
+"""Bricodari Price Intelligence backend."""
